@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gsql-track"
-version = "0.1.0"
+version = "0.2.0"
 description = "Lightweight experiment tracking and ML infrastructure with SQLite backend"
 readme = "README.md"
 license = {text = "MIT"}
@@ -25,12 +25,16 @@ dependencies = [
     "springs>=1.13.0",
     "omegaconf>=2.3.0",
     "pydantic>=2.0.0",
+    "tqdm>=4.60.0",
+    "loguru>=0.7.0",
 ]
 
 [project.optional-dependencies]
 gpu = ["torch>=2.0.0"]
 wandb = ["wandb>=0.15.0"]
-all = ["torch>=2.0.0", "wandb>=0.15.0"]
+bench = ["pandas>=2.0.0", "numpy>=1.24.0"]
+tune = ["optuna>=3.0.0", "pandas>=2.0.0", "numpy>=1.24.0", "requests>=2.28.0"]
+all = ["torch>=2.0.0", "wandb>=0.15.0", "pandas>=2.0.0", "numpy>=1.24.0", "optuna>=3.0.0", "requests>=2.28.0"]
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
@@ -43,5 +47,8 @@ Homepage = "https://github.com/ByteDennis/gsql-track"
 Repository = "https://github.com/ByteDennis/gsql-track"
 Issues = "https://github.com/ByteDennis/gsql-track/issues"
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
 [tool.setuptools.packages.find]
-include = ["gsql*"]
+include = ["gsql_track*"]
