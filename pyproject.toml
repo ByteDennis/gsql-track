@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gsql-track"
+version = "0.1.0"
+description = "Lightweight experiment tracking and ML infrastructure with SQLite backend"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+authors = [
+    {name = "Dennis Liu", email = "dennisl@example.com"}
+]
+keywords = ["mlops", "sqlite", "experiment-tracking", "ml-infrastructure"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "springs>=1.13.0",
+    "omegaconf>=2.3.0",
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+gpu = ["torch>=2.0.0"]
+wandb = ["wandb>=0.15.0"]
+all = ["torch>=2.0.0", "wandb>=0.15.0"]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.1.0",
+    "build>=1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/ByteDennis/gsql-track"
+Repository = "https://github.com/ByteDennis/gsql-track"
+Issues = "https://github.com/ByteDennis/gsql-track/issues"
+
+[tool.setuptools.packages.find]
+include = ["gsql*"]
