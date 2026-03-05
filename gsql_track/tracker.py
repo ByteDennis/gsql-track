@@ -19,6 +19,7 @@ from typing import (
 from . import util as U
 from . import config as C
 from .enums import TrainingStatus
+from .types import TrainingState, TuningState, SummaryReport
 from .log import get_logger
 
 try:
@@ -32,110 +33,6 @@ except ImportError:
     joblib = None
 
 logger = None
-
-
-# ─── Pydantic State Models ──────────────────────────────────────────────────
-
-class TrainingState(BaseModel):
-    """Internal training state for the tracker.
-
-    Example
-    -------
-    >>> state = TrainingState()
-    >>> state.current_epoch = 5
-    >>> state.best_metrics = {'acc': 0.85}
-    """
-    status: TrainingStatus = TrainingStatus.train
-    start_epoch: int = 0
-    start_step: int = 0
-    current_epoch: int = 0
-    current_step: int = 0
-    best_epoch: int = 0
-    best_step: int = 0
-    best_metric_value: Optional[float] = None
-    latest_metrics: Dict[str, Any] = {}
-    best_metrics: Dict[str, Any] = {}
-
-    @model_validator(mode="before")
-    def init_current_from_start(cls, values: dict):
-        values.setdefault("current_epoch", values.get('start_epoch', 0))
-        values.setdefault("current_step", values.get('start_step', 0))
-        return values
-
-    def __repr__(self) -> str:
-        def format_metrics(metrics: Dict[str, Any]) -> str:
-            formatted = {
-                k: round(v, 3) if isinstance(v, float) else v
-                for k, v in metrics.items()
-            }
-            return str(formatted)
-
-        return (
-            f"TrainingState("
-            f"status={self.status.value}, "
-            f"epoch={self.start_epoch}=>{self.current_epoch}, "
-            f"step={self.start_step}=>{self.current_step}, "
-            f"best_epoch={self.best_epoch}, "
-            f"best_step={self.best_step}, "
-            f"best_metric={self.best_metric_value}, "
-            f"latest_metrics={format_metrics(self.latest_metrics)}, "
-            f"best_metrics={format_metrics(self.best_metrics)})"
-        )
-
-
-class TuningState(BaseModel):
-    """State tracking for hyperparameter tuning.
-
-    Example
-    -------
-    >>> state = TuningState(n_trials=100, metric='accuracy')
-    >>> state.best_value = 0.85
-    """
-    direction: str = "maximize"
-    n_trials: Optional[int] = None
-    completed_trials: int = 0
-    timeout: int = 0
-    elapsed_time: float = 0
-    opt_variables: List[str] = []
-    metric: str = "accuracy"
-    status: str = "running"
-    best_value: float = 0
-    best_trial: Optional[int] = None
-
-    def __repr__(self) -> str:
-        progress = (
-            f"{self.completed_trials}/{self.n_trials}"
-            if self.n_trials
-            else f"{self.completed_trials}"
-        )
-        elapsed = f"{self.elapsed_time:.1f}s"
-        time_info = f"{elapsed}/{self.timeout}s" if self.timeout else elapsed
-
-        best_val = (
-            f"{self.best_value:.4f}"
-            if isinstance(self.best_value, float)
-            else str(self.best_value)
-        )
-        vars_display = ", ".join(self.opt_variables[:3])
-        if len(self.opt_variables) > 3:
-            vars_display += f"... (+{len(self.opt_variables) - 3} more)"
-        return (
-            f"TuningState("
-            f"trials={progress}, "
-            f"time={time_info}, "
-            f"status={self.status}, "
-            f"{self.direction}({self.metric})={best_val}, "
-            f"vars=[{vars_display}])"
-        )
-
-
-class SummaryReport(BaseModel):
-    """Complete training summary report."""
-    eval_config: Dict[str, Any]
-    output_config: Dict[str, Any]
-    model_info: Dict[str, Any]
-    execute_info: Dict[str, Any]
-    result_info: Dict[str, Any]
 
 
 # ─── Model Serialization ────────────────────────────────────────────────────

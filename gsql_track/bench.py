@@ -434,7 +434,7 @@ class BenchmarkRunner:
         train_config_dict = self._build_train_config(model_spec, task_config, seed)
         exe_cmd = C.generate_debug_cmd(model_spec.function, train_config_dict) if model_spec.function else None
         run_id = _start_run(self.db_path, model_spec.name, task_config.name, seed, exe_cmd)
-        gsql = GsqlTrack(f"bench/{self.config.output.name}")
+        gsql = GsqlTrack(f"bench/{self.config.output.name}", db_path=str(self.config.output / "track.db"))
         gsql_run = gsql.start_run(f"{model_spec.name}/{task_config.name}/seed_{seed}", source="bench")
         curated = {"model": model_spec.name, "task": task_config.name, "seed": seed}
         init_args = (model_spec.train_config or {}).get("model", {}).get("init_args", {})
@@ -816,7 +816,7 @@ class BenchmarkRunner:
 def run_benchmark(config: BenchmarkConfig) -> BenchmarkResults:
     runner = BenchmarkRunner(config)
     import sys
-    gsql = GsqlTrack(f"bench/{config.output.name}")
+    gsql = GsqlTrack(f"bench/{config.output.name}", db_path=str(config.output / "track.db"))
     gsql.log_experiment_metadata({
         "command": " ".join(sys.argv),
         "models": [m.name for m in config.models],

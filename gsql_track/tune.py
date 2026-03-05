@@ -830,7 +830,7 @@ class Tuner:
         if self.tracker is not None:
             callback = ProgressCallback(self.tracker, f"{job.model.name} on {job.task.name}", job.n_trials)
             callbacks.append(callback)
-        gsql = GsqlTrack(f"tune/{self.config.output.name}")
+        gsql = GsqlTrack(f"tune/{self.config.output.name}", db_path=str(self.config.output / "track.db"))
         gsql_run = gsql.start_run(f"{job.model.name}/{job.task.name}", source="tune")
         gsql_run.log_params({"model": job.model.name, "task": job.task.name, "n_trials": job.n_trials})
         try:

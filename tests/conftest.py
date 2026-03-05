@@ -2,6 +2,10 @@ import pytest
 from gsql_track.gsql_track import GsqlTrack
 
 
+def pytest_configure(config):
+    config.addinivalue_line("markers", "gpu: marks tests requiring GPU (deselect with '-m \"not gpu\"')")
+
+
 @pytest.fixture
 def tmp_db(tmp_path):
     return str(tmp_path / "test_track.db")

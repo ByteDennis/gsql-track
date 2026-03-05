@@ -1,73 +1,35 @@
+# ruff: noqa: F403 F405
 """
 gsql_track — lightweight experiment tracking and ML infrastructure.
 
-Public API:
-    Core Tracking:
-    - GsqlTrack: Main tracking class
-    - tracked: Wrapper for existing Tracker instances
-
-    Modules:
-    - util: Generic utilities (Timer, EarlyStopping, fmt_duration, etc.)
-    - log: Logger abstraction (Logger, WandbLogger, GsqlLogger)
-    - config: Config parsing and management
-    - db: SQLite job queue and state persistence
-    - dispatch: Parallel worker dispatch and GPU isolation
-    - enums: Framework enums (Direction, TrackingMode, LogMode, etc.)
-"""
-
-"""
-gsql_track — lightweight experiment tracking and ML infrastructure.
-
-Public API:
-    Core Tracking:
-    - GsqlTrack: Main tracking class
-    - tracked: Wrapper for existing Tracker instances
-
-    Modules:
-    - util: Generic utilities (Timer, EarlyStopping, fmt_duration, etc.)
-    - log: Logger abstraction (Logger, WandbLogger, GsqlLogger)
-    - config: Config parsing and management
-    - db: SQLite job queue and state persistence
-    - dispatch: Parallel worker dispatch and GPU isolation
-    - enums: Framework enums (Direction, TrackingMode, LogMode, etc.)
-    - tracker: Training loop tracker (Tracker, ModelSerializer)
-    - bench: Benchmark runner (BenchmarkRunner, requires pandas/numpy)
-    - tune: Hyperparameter tuning (Tuner, requires optuna/pandas/numpy)
+Public API re-exports all submodule contents for convenient access:
+    import gsql_track as lib
+    lib.Tracker(...)
+    lib.METRIC_REGISTRY[...]
 """
 
 from .gsql_track import GsqlTrack, tracked
-from . import util
-from . import log
-from . import config
-from . import db
-from . import dispatch
-from . import enums
-from . import tracker
 
-# bench and tune have heavy deps (pandas, numpy, optuna) — import on demand
-def __getattr__(name):
-    if name == "bench":
-        from . import bench
-        return bench
-    if name == "tune":
-        from . import tune
-        return tune
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+# Re-export all submodule contents for `import gsql_track as lib` usage
+from .config import *
+from .db import *
+from .dispatch import *
+from .log import *
+from .util import *
+from .plan import *
+from .enums import *
+from .types import *
+from .tracker import *
+from .metric import *
+from .prompt import *
+from .data import *
+from .testing import *
 
-__all__ = [
-    # Core tracking
-    "GsqlTrack",
-    "tracked",
-    # Modules
-    "util",
-    "log",
-    "config",
-    "db",
-    "dispatch",
-    "enums",
-    "tracker",
-    "bench",
-    "tune",
-]
+# bench and tune have heavy deps (pandas, numpy, optuna) — lazy import submodules
+# but eagerly re-export their contents for lib.X access
+from .bench import *
+from .tune import *
 
-__version__ = "0.2.0"
+__all__ = ["GsqlTrack", "tracked"]
+
+__version__ = "0.3.0"
