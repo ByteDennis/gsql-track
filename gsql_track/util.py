@@ -213,6 +213,9 @@ class EarlyStopping:
         n_epochs: Optional[int] = None,
         n_steps: Optional[int] = None,
         steps_per_epoch: Optional[int] = None,
+        buffer: int = 0,
+        min_delta: float = 0.0,
+        **kwargs,
     ):
         self.patience = patience
         self.direction = direction
@@ -221,25 +224,32 @@ class EarlyStopping:
         self.n_epochs = n_epochs
         self.n_steps = n_steps
         self.steps_per_epoch = steps_per_epoch
+        self.buffer = buffer
+        self.min_delta = min_delta
 
         self._enable = patience > 0
         self.counter = 0
+        self.update_count = 0
         self.best_value = float('-inf') if direction == "maximize" else float('inf')
         self._is_better = False
 
     def update(self, value: float):
         """Update with new metric value and check if improved."""
-        is_better = (
-            (self.direction == "maximize" and value > self.best_value) or
-            (self.direction == "minimize" and value < self.best_value)
-        )
+        self.update_count += 1
+
+        if self.direction == "maximize":
+            is_better = value > self.best_value + self.min_delta
+        else:
+            is_better = value < self.best_value - self.min_delta
 
         if is_better:
             self.best_value = value
             self.counter = 0
             self._is_better = True
-        else:
+        elif self.update_count > self.buffer:
             self.counter += 1
+            self._is_better = False
+        else:
             self._is_better = False
 
     def should_stop(self) -> bool:
