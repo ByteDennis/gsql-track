@@ -832,7 +832,6 @@ class Tuner:
             callbacks.append(callback)
         gsql = GsqlTrack(f"tune/{self.config.output.name}", db_path=str(self.config.output / "track.db"))
         gsql_run = gsql.start_run(f"{job.model.name}/{job.task.name}", source="tune")
-        gsql_run.log_params({"model": job.model.name, "task": job.task.name, "n_trials": job.n_trials})
         try:
             study.optimize(
                 objective, n_trials=remaining_trials, timeout=job.timeout,
@@ -854,10 +853,27 @@ class Tuner:
                 pass
             n_completed = len([t for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE])
             _finish_job(self.db_path, job.model.name, job.task.name, completed_trials=n_completed)
+            # Log each completed trial as a step with params + metrics
+            for t in [t for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE]:
+                trial_metrics = dict(t.params)
+                result = t.user_attrs.get('result', {})
+                for k, v in result.items():
+                    if isinstance(v, (int, float)):
+                        trial_metrics[k] = v
+                gsql_run.log(step=t.number, **trial_metrics)
+            # Log best params and metric info as run params
+            job_metric_name, job_direction = _resolve_job_metric(job.task, self.config.metric, self.config.direction)
+            run_params = {
+                "model": job.model.name, "task": job.task.name,
+                "n_trials": n_completed, "metric": job_metric_name, "direction": job_direction,
+            }
             try:
-                gsql_run.log(0, best_value=study.best_trial.value, n_completed=n_completed)
+                best_trial = study.best_trial
+                run_params.update({f"best.{k}": str(v) for k, v in best_trial.params.items()})
+                run_params["best.value"] = str(best_trial.value)
             except ValueError:
-                gsql_run.log(0, n_completed=n_completed)
+                pass
+            gsql_run.log_params(run_params)
             gsql_run.finish()
             gsql.close()
             return self._load_job_result_from_study(study, job)
@@ -1284,3 +1300,26 @@ __all__ = [
     "get_best_config",
     "get_failed_jobs",
 ]
+
+
+if __name__ == "__main__":
+    import argparse
+    import springs as sp
+    from omegaconf import OmegaConf
+
+    parser = argparse.ArgumentParser(description="gsql_track: hyperparameter tuning")
+    parser.add_argument("-c", "--config", required=True, help="Path to tune YAML config")
+    parser.add_argument("-y", "--yes", action="store_true", help="Auto-confirm without prompt")
+    parser.add_argument("overrides", nargs="*", help="Key=value overrides (e.g., n_trials=3)")
+    args = parser.parse_args()
+
+    cfg = sp.from_file(args.config)
+    if args.overrides:
+        cfg = OmegaConf.merge(cfg, OmegaConf.from_dotlist(args.overrides))
+    config_data = OmegaConf.to_container(cfg, resolve=True, enum_to_str=True)
+
+    U.pre_import_modules(config_data.get("pre_import_modules") or [])
+    config = TuneConfig(**config_data)
+    if args.yes:
+        config.auto_confirm = True
+    run_tuning(config)

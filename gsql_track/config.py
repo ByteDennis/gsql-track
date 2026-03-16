@@ -5,7 +5,7 @@ Provides type-safe configs using springs/OmegaConf with YAML loading,
 variable substitution, and hierarchical merging.
 """
 from . import enums as T
-from .enums import Direction, LogMode, SampleMode, PruneMode
+from .enums import Direction, LogMode, SampleMode, PruneMode, CheckpointSource
 import yaml
 import json
 import os
@@ -41,7 +41,6 @@ try:
     OmegaConf.register_new_resolver("interval", lambda start, end: [start, end])
 except ValueError:
     pass
-except ValueError: pass  # Already registered
 
 #>>> YAML custom tags <<<
 def _important_constructor(loader, node):
@@ -108,26 +107,10 @@ class TaskConfig:
         default_factory=dict,
         help="Data specification (data_class, init_args, process_args)"
     )
-    metrics: List[str] = sp.field(
-        default_factory=lambda: ['acc', 'f1'],
-        help="[Deprecated] Unused — display is controlled by eval.display_metric. Will be removed in a future version."
-    )
     config: Optional[Dict[str, Any]] = sp.field(
         default=None,
         help="Task-level config overrides"
     )
-
-    def __getattribute__(self, name):
-        if name == 'metrics':
-            import warnings
-            warnings.warn(
-                "TaskConfig.metrics is deprecated and unused. "
-                "Display is controlled by eval.display_metric instead. "
-                "This field will be removed in a future version.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-        return super().__getattribute__(name)
 
 @sp.dataclass
 class SamplerConfig:
@@ -200,7 +183,7 @@ class EvalConfig:
     display_metric: Any = sp.field(
         default="acc", help="Metric(s) to display in results CSV. String or list of strings (e.g., 'acc' or ['test.acc', 'test.f1'])"
     )
-    
+
 @sp.dataclass
 class ModelConfig:
     """Base model configuration - to be extended by specific baselines.
@@ -212,7 +195,7 @@ class ModelConfig:
     ...     lr: float = 0.01
     >>> cfg = MyConfig(name='my_model', metric='f1')
     """
-    name: str = sp.field(help='Name of the algorithm, affecting output folder')
+    name: str = sp.field(default="model", help='Name of the algorithm, affecting output folder')
     metric: str = sp.field(
         default="acc", help="Evaluation metric (e.g., 'acc', 'f1', or callable)"
     )
@@ -321,29 +304,14 @@ class StartConfig:
 
 
 class ResumeMode(str, Enum):
-    """Resume mode for experiment execution.
-
-    Example
-    -------
-    >>> ResumeMode.fresh     # Delete all and start from scratch
-    >>> ResumeMode.resume    # Skip completed runs
-    >>> ResumeMode.append    # Always run without deleting
-    """
+    """Resume mode for experiment execution."""
     fresh = "fresh"
     resume = "resume"
     append = "append"
 
 
 def resolve_resume_mode(value) -> 'ResumeMode':
-    """Convert a string or ResumeMode to ResumeMode enum.
-
-    Shared by bench_manager and tune_manager.
-
-    Example
-    -------
-    >>> resolve_resume_mode("fresh")
-    <ResumeMode.fresh: 'fresh'>
-    """
+    """Convert a string or ResumeMode to ResumeMode enum."""
     return value if isinstance(value, ResumeMode) else ResumeMode(value)
 
 
@@ -376,7 +344,7 @@ class PbarConfig:
     persist: bool = sp.field(
         default=False, help="Keep progress bar displayed after completion"
     )
-    
+
 @sp.dataclass(kw_only=True)
 class TrainConfig(StartConfig):
     """Configuration for model training.
@@ -391,7 +359,7 @@ class TrainConfig(StartConfig):
     log: Optional[LogConfig] = sp.field( default_factory=LogConfig, help="Logging configuration")
     eval: EvalConfig = sp.field( default_factory=EvalConfig, help="Help evaluate model during training")
     pbar: PbarConfig = sp.field( default_factory=PbarConfig, help="Progress bar related features")
-    resume_from: ResumeMode = ( sp.field(default=T.ResumeMode.best_model, help="Which model/pred to load from"))
+    resume_from: str = sp.field(default="best_model", help="Checkpoint source: best_model, last_model, best_pred, last_pred")
     exp_name: str = sp.field( default="E01", metadata={"help": "Name to save experiment result under the same algorithm/data"})
     tracking_mode: Optional[T.TrackingMode] = sp.field(
         default=None,
@@ -451,11 +419,10 @@ def resolve_config(config: InputConfig, resolve=True) -> InputConfig:
         config = create_config(config)
     return OmegaConf.to_container(config, resolve=resolve, enum_to_str=True)
 
-def load_config(config_path):
-    """Load config from YAML file."""
+def load_config(config_path) -> dict:
+    """Load config from YAML file and return as plain Python dict."""
     unsolved_config = sp.from_file(config_path)
-    config = resolve_config(unsolved_config)
-    return create_config(config)
+    return resolve_config(unsolved_config)
 
 def _parse_type(field_type):
     """Return base type from Optional or Union type."""

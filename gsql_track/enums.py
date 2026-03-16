@@ -58,16 +58,12 @@ class PruneMode(str, Enum):
     hyperband = "hyperband"
 
 
-class ResumeMode(str, Enum):
-    """Checkpoint resume source."""
+class CheckpointSource(str, Enum):
+    """Which checkpoint to resume from during training."""
     best_model = "best_model"
     last_model = "last_model"
     best_pred = "best_pred"
     last_pred = "last_pred"
-
-
-# Backwards compatibility
-Patience = TrackingMode
 
 
 __all__ = [
@@ -77,6 +73,5 @@ __all__ = [
     "TrainingStatus",
     "SampleMode",
     "PruneMode",
-    "ResumeMode",
-    "Patience",
+    "CheckpointSource",
 ]

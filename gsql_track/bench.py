@@ -840,3 +840,26 @@ __all__ = [
     'run_benchmark',
     'load_best_config',
 ]
+
+
+if __name__ == "__main__":
+    import argparse
+    import springs as sp
+    from omegaconf import OmegaConf
+
+    parser = argparse.ArgumentParser(description="gsql_track: benchmarking")
+    parser.add_argument("-c", "--config", required=True, help="Path to bench YAML config")
+    parser.add_argument("-y", "--yes", action="store_true", help="Auto-confirm without prompt")
+    parser.add_argument("overrides", nargs="*", help="Key=value overrides (e.g., n_workers=1)")
+    args = parser.parse_args()
+
+    cfg = sp.from_file(args.config)
+    if args.overrides:
+        cfg = OmegaConf.merge(cfg, OmegaConf.from_dotlist(args.overrides))
+    config_data = OmegaConf.to_container(cfg, resolve=True, enum_to_str=True)
+
+    U.pre_import_modules(config_data.get("pre_import_modules") or [])
+    config = BenchmarkConfig(**config_data)
+    if args.yes:
+        config.auto_confirm = True
+    run_benchmark(config)
