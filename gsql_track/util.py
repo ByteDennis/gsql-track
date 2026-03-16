@@ -187,6 +187,12 @@ class Timer:
             self.start_time = None
         return self.elapsed
 
+    def total(self):
+        """Return total elapsed time (updates if still running)."""
+        if self.start_time is not None:
+            return time.time() - self.start_time
+        return self.elapsed
+
     def reset(self):
         """Reset the timer."""
         self.start_time = None
